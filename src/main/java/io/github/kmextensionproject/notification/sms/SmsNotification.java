@@ -69,7 +69,7 @@ public class SmsNotification implements Notification {
 		try {
 			PhoneNumber to = new PhoneNumber(recipient.getPhoneNumber());
 			creator(to, senderPhone, message.getBody()).create();
-			return success("SMS sent successfully to " + recipient.getEmail());
+			return success("SMS sent successfully to " + recipient.getPhoneNumber());
 		} catch (Exception ex) {
 			return failure("Could not send an SMS to " + recipient.getPhoneNumber(), ex);
 		}
@@ -82,5 +82,4 @@ public class SmsNotification implements Notification {
 	private void disableSending() {
 		sendingEnabled = false;
 	}
-
 }

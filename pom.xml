@@ -135,8 +135,8 @@
 											<maven-central>
 												<active>ALWAYS</active>
 												<url>https://s01.oss.sonatype.org/service/local</url>;
-												<closeRepository>false</closeRepository> <!-- change these to true after first successful publish -->
-												<releaseRepository>false</releaseRepository>
+												<closeRepository>true</closeRepository> <!-- change these to true after first successful publish -->
+												<releaseRepository>true</releaseRepository>
 												<stagingRepositories>target/staging-deploy</stagingRepositories>
 											</maven-central>
 										</nexus2>

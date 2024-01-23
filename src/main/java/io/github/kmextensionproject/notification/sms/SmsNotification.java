@@ -6,6 +6,10 @@ import static io.github.kmextensionproject.notification.base.NotificationResult.
 import static java.util.Objects.isNull;
 import static java.util.Objects.requireNonNull;
 
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.logging.Logger;
 
 import com.twilio.Twilio;
@@ -56,6 +60,12 @@ public class SmsNotification implements Notification {
 		return value;
 	}
 
+	/**
+	 * Attempts to send SMS notification to every phone number the recipient
+	 * has.<br>
+	 * If sending fails on any number, this method results in
+	 * {@link NotificationResult.Status#FAILURE}.
+	 */
 	@Override
 	public NotificationResult sendNotification(Message message, Recipient recipient) {
 		requireNonNull(message, "message cannot be null");
@@ -63,20 +73,44 @@ public class SmsNotification implements Notification {
 
 		if (!sendingEnabled) {
 			return failure("Can not send an SMS - missing proper configuration, check logs for missing variables"); 
-		} else if (isBlank(message.getBody()) || isBlank(recipient.getPhoneNumber())) {
+		} else if (isBlank(message.getBody()) || recipient.getPhoneNumber().isEmpty()) {
 			return failure("Can not send an SMS - message body or recipient's phone number is missing");
 		}
-		try {
-			PhoneNumber to = new PhoneNumber(recipient.getPhoneNumber());
-			creator(to, senderPhone, message.getBody()).create();
-			return success("SMS sent successfully to " + recipient.getPhoneNumber());
-		} catch (Exception ex) {
-			return failure("Could not send an SMS to " + recipient.getPhoneNumber(), ex);
-		}
+		return sendSMS(message, recipient);
 	}
 
 	private boolean isBlank(String value) {
 		return isNull(value) || value.trim().isEmpty();
+	}
+
+	private NotificationResult sendSMS(Message message, Recipient recipient) {
+		List<String> sent = new ArrayList<>(3);
+		Map<String, Throwable> failed = new HashMap<>(3);
+		recipient.getPhoneNumber().stream()
+			.filter(num -> !isBlank(num))
+			.forEach(num -> {
+				try {
+					creator(new PhoneNumber(num), 
+							senderPhone, 
+							message.getBody())
+					.create();
+					sent.add(num);
+				} catch (Exception ex) {
+					failed.put(num, ex);
+				}
+			});
+		return resolveResult(sent, failed);
+	}
+
+	private NotificationResult resolveResult(List<String> sent, Map<String, Throwable> failed) {
+		if (sent.isEmpty()) {
+			return failure("Could not send an SMS to " + failed.keySet());
+		} else if (failed.isEmpty()) {
+			return success("SMS sent successfully to " + sent);
+		}
+		return failure("SMS sent successfully to " + sent 
+				+ ", but could not be sent to " + failed.keySet() 
+				+ "- probable cause: " + failed.entrySet().iterator().next());
 	}
 
 	private void disableSending() {
